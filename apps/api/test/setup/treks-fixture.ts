@@ -82,4 +82,30 @@ export const TREKS_FIXTURE: TrekImportRow[] = [
     startPoint: { type: 'Point', coordinates: [-4.48, 48.39] },
     distanceMeters: 8_000,
   }),
+  // Deux homonymes au meme point de depart : le cas qui rend une pagination
+  // visible. Sans depart par `id`, l'ordre de ces deux lignes est libre entre
+  // deux requetes, aussi bien pour le tri alphabetique que pour le tri par
+  // distance — et une page en montre alors une deux fois pendant que l'autre
+  // disparait. Les distances les tiennent hors du filtre 8-15 km.
+  row({ name: 'Tour du lac', sourceId: '6', distanceMeters: 25_000 }),
+  row({ name: 'Tour du lac', sourceId: '7', distanceMeters: 26_000 }),
+  row({
+    // Demarre a une soixantaine de kilometres du point de reference des tests,
+    // donc hors rayon, mais sa trace revient a moins de cinq kilometres :
+    // temoin de la difference entre `matchOn=start` et `matchOn=trace`.
+    name: 'Traversee du Champsaur',
+    sourceId: '8',
+    distanceMeters: 40_000,
+    startPoint: { type: 'Point', coordinates: [7.1, 44.93] },
+    geometry: {
+      type: 'LineString',
+      coordinates: [
+        [7.1, 44.93],
+        // Plus de decimales que la sortie n'en conserve : sert de temoin a
+        // l'arrondi de `ST_AsGeoJSON`.
+        [6.712345678, 44.951234567],
+        [6.35, 44.93],
+      ],
+    },
+  }),
 ];

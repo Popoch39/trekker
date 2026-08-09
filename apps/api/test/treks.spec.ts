@@ -119,6 +119,9 @@ describe('Catalogue d itineraires', () => {
         'Col du Galibier',
         'Plateau d Emparis',
         'Sentier littoral',
+        'Tour du lac',
+        'Tour du lac',
+        'Traversee du Champsaur',
       ]);
       // La trace n'a pas sa place dans une liste : vingt itineraires
       // representeraient plusieurs megaoctets.
@@ -144,10 +147,50 @@ describe('Catalogue d itineraires', () => {
       expect(first.body.meta).toEqual({
         page: 1,
         pageSize: 2,
-        total: 5,
-        totalPages: 3,
+        total: TREKS_FIXTURE.length,
+        totalPages: 4,
       });
       expect(second.body.data[0].name).toBe('Col du Galibier');
+    });
+
+    /**
+     * Le vrai test de la pagination : deux itineraires homonymes partagent la
+     * cle de tri, et seul un depart stable empeche l'un de sortir deux fois
+     * pendant que l'autre est saute. Une page par ligne maximise les occasions
+     * de le prendre en defaut.
+     */
+    it('ne perd ni ne duplique de ligne quand la cle de tri est ex aequo', async () => {
+      const pages = await Promise.all(
+        Array.from({ length: TREKS_FIXTURE.length }, (_unused, index) =>
+          list(`?page=${index + 1}&pageSize=1`),
+        ),
+      );
+
+      const ids = pages.flatMap((page) =>
+        page.body.data.map((trek: { id: string }) => trek.id),
+      );
+
+      expect(ids).toHaveLength(TREKS_FIXTURE.length);
+      expect(new Set(ids).size).toBe(TREKS_FIXTURE.length);
+    });
+
+    it('departage aussi les ex aequo du tri par distance', async () => {
+      const query = '?lat=44.93&lon=6.29&radiusKm=50&pageSize=1';
+
+      const pages = await Promise.all([
+        list(`${query}&page=1`),
+        list(`${query}&page=2`),
+        list(`${query}&page=3`),
+        list(`${query}&page=4`),
+        list(`${query}&page=5`),
+        list(`${query}&page=6`),
+      ]);
+
+      const ids = pages.flatMap((page) =>
+        page.body.data.map((trek: { id: string }) => trek.id),
+      );
+
+      expect(new Set(ids).size).toBe(6);
     });
 
     it('filtre par difficulte', async () => {
@@ -173,11 +216,65 @@ describe('Catalogue d itineraires', () => {
       const response = await list('?lat=44.93&lon=6.29&radiusKm=50');
 
       expect(response.status).toBe(200);
-      // Le sentier littoral, a plusieurs centaines de kilometres, est exclu.
-      expect(response.body.meta.total).toBe(4);
+      // Le sentier littoral, a plusieurs centaines de kilometres, est exclu ;
+      // la traversee du Champsaur aussi, car seul son depart compte ici.
+      expect(response.body.meta.total).toBe(6);
+
+      const names = response.body.data.map(
+        (trek: { name: string }) => trek.name,
+      );
+
+      expect(names).not.toContain('Sentier littoral');
+      expect(names).not.toContain('Traversee du Champsaur');
+    });
+
+    it('elargit la proximite a la trace entiere avec matchOn=trace', async () => {
+      const response = await list(
+        '?lat=44.93&lon=6.29&radiusKm=50&matchOn=trace',
+      );
+
+      expect(response.status).toBe(200);
+      // La traversee demarre hors rayon mais y revient : elle repond a « quels
+      // itineraires passent pres d ici », pas a « lesquels partent d ici ».
+      expect(response.body.meta.total).toBe(7);
+      expect(
+        response.body.data.map((trek: { name: string }) => trek.name),
+      ).toContain('Traversee du Champsaur');
+    });
+
+    it('filtre par cadre de carte', async () => {
+      const response = await list('?bbox=6.0,44.5,6.8,45.2');
+
+      expect(response.status).toBe(200);
+      expect(response.body.meta.total).toBe(6);
       expect(
         response.body.data.map((trek: { name: string }) => trek.name),
       ).not.toContain('Sentier littoral');
+    });
+
+    it('etend le cadre de carte a la trace avec matchOn=trace', async () => {
+      const response = await list('?bbox=6.0,44.5,6.8,45.2&matchOn=trace');
+
+      expect(response.body.meta.total).toBe(7);
+      expect(
+        response.body.data.map((trek: { name: string }) => trek.name),
+      ).toContain('Traversee du Champsaur');
+    });
+
+    it('refuse un cadre de carte combine a une recherche par proximite', async () => {
+      const response = await list(
+        '?bbox=6.0,44.5,6.8,45.2&lat=44.93&lon=6.29&radiusKm=50',
+      );
+
+      expect(response.status).toBe(422);
+    });
+
+    it('refuse un cadre de carte aux coins inverses', async () => {
+      expect((await list('?bbox=6.8,45.2,6.0,44.5')).status).toBe(422);
+    });
+
+    it('refuse un cadre de carte incomplet', async () => {
+      expect((await list('?bbox=6.0,44.5')).status).toBe(422);
     });
 
     it('combine proximite et filtres', async () => {
@@ -199,6 +296,25 @@ describe('Catalogue d itineraires', () => {
         'application/problem+json',
       );
       expect(response.body.errors).toBeDefined();
+    });
+
+    /**
+     * `z.coerce.number()` rend `0` pour une chaine vide : sans prefiltre, cette
+     * requete decrirait une recherche autour du point (0, 0) — au large du
+     * golfe de Guinee — et rendrait une liste vide que le client prendrait pour
+     * « aucun itineraire pres de vous ».
+     */
+    it('traite un parametre vide comme absent plutot que comme zero', async () => {
+      const response = await list('?lat=&lon=&radiusKm=10');
+
+      expect(response.status).toBe(422);
+    });
+
+    it('ignore des bornes de distance vides', async () => {
+      const response = await list('?minDistanceMeters=&maxDistanceMeters=');
+
+      expect(response.status).toBe(200);
+      expect(response.body.meta.total).toBe(TREKS_FIXTURE.length);
     });
 
     it('refuse des bornes de distance incoherentes', async () => {
@@ -230,6 +346,24 @@ describe('Catalogue d itineraires', () => {
       expect(response.body.geometry.type).toBe('LineString');
       expect(response.body.geometry.coordinates).toHaveLength(3);
       expect(response.body.geometry.coordinates[0]).toEqual([6.29, 44.93]);
+    });
+
+    /**
+     * Six decimales valent une dizaine de centimetres, un ordre de grandeur
+     * sous la precision d'un GPS de randonnee. Les neuf decimales par defaut de
+     * `ST_AsGeoJSON` ne transportent que du bruit, facture au client mobile.
+     */
+    it('arrondit les coordonnees a six decimales', async () => {
+      const [summary] = (await list('?bbox=7.0,44.5,7.2,45.2')).body.data;
+
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/treks/${summary.id}`)
+        .set('authorization', `Bearer ${token}`);
+
+      expect(response.body.name).toBe('Traversee du Champsaur');
+      expect(response.body.geometry.coordinates[1]).toEqual([
+        6.712346, 44.951235,
+      ]);
     });
 
     it('rend 404 en RFC 9457 sur un identifiant inconnu', async () => {

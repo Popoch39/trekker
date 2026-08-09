@@ -23,9 +23,19 @@ carte. Un trek a exactement une trace.
 _Avoid_: Geometrie, GPX, ligne, chemin
 
 **Point de depart**:
-La position ou commence un trek. Derive de la trace, conserve a part parce que
-c'est sur lui que porte la recherche par proximite.
+La position ou commence un trek. Conserve a part de la trace parce que c'est la
+forme indexable de la recherche par proximite. Il n'est pas toujours le premier
+point de la trace : quand la source publie un depart explicite, c'est lui qui
+fait foi.
 _Avoid_: Depart, origine, start
+
+**Proximite au depart / proximite a la trace**:
+Deux questions distinctes, et non deux precisions de la meme. La premiere
+demande « quels itineraires commencent pres d'ici », la seconde « lesquels
+passent pres d'ici » — un GR qui traverse la zone sans y demarrer ne repond
+qu'a la seconde. Le catalogue repond a la premiere par defaut ; la seconde se
+demande explicitement.
+_Avoid_: Rayon, autour de moi (ambigus entre les deux)
 
 **Type de parcours**:
 La forme du trek : boucle, aller-retour, ou d'un point a un autre.

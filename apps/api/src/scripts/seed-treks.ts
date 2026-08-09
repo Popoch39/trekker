@@ -65,7 +65,10 @@ export async function seedTreks(
           startPoint: sql`excluded.start_point`,
           sourceUrl: sql`excluded.source_url`,
           license: sql`excluded.license`,
-          updatedAt: new Date(),
+          // `now()` de la base, et non l'horloge du process : toutes les autres
+          // ecritures du projet s'horodatent cote serveur, et un seed lance
+          // depuis un poste desynchronise ecrirait sinon des dates fausses.
+          updatedAt: sql`now()`,
         },
       })
       .returning({ id: treks.id });

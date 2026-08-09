@@ -19,6 +19,17 @@ export const entityBaseSchema = z.object({
   updatedAt: timestampSchema,
 });
 
+/**
+ * Traite un parametre de query string vide comme absent.
+ *
+ * `z.coerce.number()` rend `0` pour une chaine vide : sans ce prefiltre,
+ * `?lat=&lon=&radiusKm=10` decrirait une recherche autour du point (0, 0) que
+ * le client croirait filtree sur sa position. Un parametre present mais vide
+ * vaut absent, ce qui laisse les `refine` de coherence faire leur travail.
+ */
+export const blankAsUndefined = <T extends z.ZodType>(schema: T) =>
+  z.preprocess((value) => (value === '' ? undefined : value), schema);
+
 export type Uuid = z.infer<typeof uuidSchema>;
 export type Timestamp = z.infer<typeof timestampSchema>;
 export type EntityBase = z.infer<typeof entityBaseSchema>;

@@ -5,6 +5,7 @@ import {
   type Trek,
   type TrekList,
   type TrekListQuery,
+  type TrekMatchOn,
   type TrekSummary,
 } from '@repo/contracts';
 import { schema } from '@repo/db';
@@ -26,6 +27,16 @@ const { treks } = schema;
 export class TreksService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
+  /**
+   * Decimales conservees a la serialisation GeoJSON.
+   *
+   * Six decimales valent une dizaine de centimetres, soit un ordre de grandeur
+   * sous la precision d'un GPS de randonnee. Le defaut de `ST_AsGeoJSON` en
+   * emet neuf, ce qui gonfle chaque trace de bruit que personne ne peut
+   * exploiter — et se paie en donnees mobiles.
+   */
+  private static readonly GEOJSON_DECIMALS = 6;
+
   /** Colonnes communes aux deux routes : tout sauf la trace. */
   private get summaryColumns() {
     return {
@@ -45,7 +56,9 @@ export class TreksService {
       updatedAt: treks.updatedAt,
       startPoint: sql<
         TrekSummary['startPoint']
-      >`ST_AsGeoJSON(${treks.startPoint})::json`.as('start_point_geojson'),
+      >`ST_AsGeoJSON(${treks.startPoint}, ${TreksService.GEOJSON_DECIMALS})::json`.as(
+        'start_point_geojson',
+      ),
     };
   }
 
@@ -56,6 +69,21 @@ export class TreksService {
    */
   private static referencePoint(lat: number, lon: number): SQL {
     return sql`ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)::geography`;
+  }
+
+  /**
+   * Colonne sur laquelle portent les filtres spatiaux.
+   *
+   * `start` ne regarde que le depart, `trace` le parcours entier : un GR qui
+   * traverse la zone sans y demarrer ne repond qu'a la seconde question. Les
+   * deux colonnes sont castees en `geography` — c'est sous cette forme que
+   * PostGIS raisonne en metres, et c'est l'expression que portent les index
+   * GiST correspondants.
+   */
+  private static spatialColumn(matchOn: TrekMatchOn): SQL {
+    return matchOn === 'trace'
+      ? sql`${treks.geometry}::geography`
+      : sql`${treks.startPoint}::geography`;
   }
 
   async findMany(query: TrekListQuery): Promise<TrekList> {
@@ -73,6 +101,8 @@ export class TreksService {
       conditions.push(lte(treks.distanceMeters, query.maxDistanceMeters));
     }
 
+    const spatial = TreksService.spatialColumn(query.matchOn);
+
     // Le contrat garantit que les trois parametres vont ensemble : tester `lat`
     // suffit a etablir la presence des deux autres.
     const nearby =
@@ -82,7 +112,15 @@ export class TreksService {
 
     if (nearby) {
       conditions.push(
-        sql`ST_DWithin(${treks.startPoint}::geography, ${nearby}, ${(query.radiusKm as number) * 1000})`,
+        sql`ST_DWithin(${spatial}, ${nearby}, ${(query.radiusKm as number) * 1000})`,
+      );
+    }
+
+    if (query.bbox) {
+      const [minLon, minLat, maxLon, maxLat] = query.bbox;
+
+      conditions.push(
+        sql`ST_Intersects(${spatial}, ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326)::geography)`,
       );
     }
 
@@ -94,12 +132,20 @@ export class TreksService {
         .select(this.summaryColumns)
         .from(treks)
         .where(where)
-        // Sans point de reference, l'ordre alphabetique : une liste paginee
-        // sans tri deterministe rendrait des doublons entre deux pages.
+        // `<->` plutot que `ST_Distance` : l'operateur declenche le parcours
+        // KNN de l'index GiST, qui rend les lignes deja ordonnees et s'arrete
+        // apres `limit`. Avec une fonction scalaire, Postgres trie d'abord le
+        // rayon entier.
+        //
+        // Sans point de reference, l'ordre alphabetique. `id` departage dans
+        // les deux cas : ni `name` ni la distance ne sont uniques — plusieurs
+        // instances publient un « Tour du lac », et deux itineraires partagent
+        // souvent un meme parking de depart. Sans ce dernier critere, l'ordre
+        // des ex aequo est libre entre deux requetes, et une pagination par
+        // OFFSET rend alors des doublons tout en sautant des lignes.
         .orderBy(
-          nearby
-            ? sql`ST_Distance(${treks.startPoint}::geography, ${nearby})`
-            : asc(treks.name),
+          nearby ? sql`${spatial} <-> ${nearby}` : asc(treks.name),
+          asc(treks.id),
         )
         .limit(limit)
         .offset(offset),
@@ -121,7 +167,9 @@ export class TreksService {
         description: treks.description,
         geometry: sql<
           Trek['geometry']
-        >`ST_AsGeoJSON(${treks.geometry})::json`.as('geometry_geojson'),
+        >`ST_AsGeoJSON(${treks.geometry}, ${TreksService.GEOJSON_DECIMALS})::json`.as(
+          'geometry_geojson',
+        ),
       })
       .from(treks)
       .where(eq(treks.id, id))

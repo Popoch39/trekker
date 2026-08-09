@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  check,
   index,
   integer,
   pgEnum,
@@ -97,14 +98,49 @@ export const treks = pgTable(
       table.sourceInstance,
       table.sourceId,
     ),
+    // L'unicite ci-dessus ne contraint rien tant que `source_id` peut etre nul :
+    // deux NULL ne s'opposent pas, et deux imports du meme trek Geotrek
+    // creeraient deux lignes sans que le seed s'en apercoive. Les treks
+    // utilisateurs, eux, gardent le droit d'avoir les trois colonnes nulles.
+    check(
+      'treks_source_ref_check',
+      sql`${table.source} <> 'geotrek' OR (${table.sourceInstance} IS NOT NULL AND ${table.sourceId} IS NOT NULL)`,
+    ),
+    // Mesures physiques : le contrat les borne deja a zero cote client, mais
+    // le seed ecrit en base sans passer par lui.
+    check(
+      'treks_measures_check',
+      sql`${table.distanceMeters} >= 0
+        AND (${table.ascentMeters} IS NULL OR ${table.ascentMeters} >= 0)
+        AND (${table.descentMeters} IS NULL OR ${table.descentMeters} >= 0)
+        AND (${table.durationMinutes} IS NULL OR ${table.durationMinutes} >= 0)`,
+    ),
     // Index d'expression sur le cast en `geography` : c'est sous cette forme
     // que les requetes de proximite interrogent la colonne (`ST_DWithin` en
-    // metres). Un index sur la `geometry` brute ne serait pas retenu.
+    // metres, et le tri par `<->`). Un index sur la `geometry` brute ne serait
+    // pas retenu.
     index('treks_start_point_idx').using(
       'gist',
       sql`(${table.startPoint}::geography)`,
     ),
-    index('treks_difficulty_idx').on(table.difficulty),
-    index('treks_distance_meters_idx').on(table.distanceMeters),
+    // Meme forme sur la trace, pour les recherches qui portent sur le parcours
+    // entier plutot que sur son depart (`matchOn=trace`, cadre de carte).
+    // Nettement plus gros qu'un index de points, et le calcul exact qui suit le
+    // filtre d'index l'est aussi : c'est le prix de la question posee.
+    index('treks_geometry_idx').using(
+      'gist',
+      sql`(${table.geometry}::geography)`,
+    ),
+    // Un index sur `difficulty` seul ne serait jamais retenu : quatre valeurs
+    // plus NULL n'ecartent presque rien. En tete d'un composite il sert de
+    // prefixe, et la combinaison difficulte + bornes de distance est le filtre
+    // reellement emis par la liste.
+    index('treks_difficulty_distance_idx').on(
+      table.difficulty,
+      table.distanceMeters,
+    ),
+    // La cle etrangere est `ON DELETE set null` : sans index, supprimer un
+    // utilisateur parcourt toute la table.
+    index('treks_created_by_idx').on(table.createdBy),
   ],
 );
