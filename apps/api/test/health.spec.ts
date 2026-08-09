@@ -1,10 +1,15 @@
-import { Controller, Get, VersioningType } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
+import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { startTestDatabase, type TestDatabase } from './setup/postgres';
+import {
+  AUTH_SECRET,
+  startTestDatabase,
+  type TestDatabase,
+} from './setup/postgres';
 
 /**
  * Test de plomberie : Postgres jetable, migrations reelles, application Nest
@@ -17,6 +22,7 @@ import { startTestDatabase, type TestDatabase } from './setup/postgres';
  * volontairement exclues du throttling, il faut une vraie route pour le
  * verifier tant qu'aucun module metier n'existe.
  */
+@AllowAnonymous()
 @Controller('ping')
 class PingController {
   @Get()
@@ -39,27 +45,26 @@ describe('Socle applicatif', () => {
     process.env.LOG_LEVEL = 'silent';
     process.env.CORS_ORIGINS = '';
     process.env.THROTTLE_LIMIT = String(THROTTLE_LIMIT);
+    process.env.BETTER_AUTH_SECRET = AUTH_SECRET;
 
     // Import differe : `ConfigModule.forRoot()` valide l'environnement des
     // l'evaluation du module, donc apres seulement que les variables ci-dessus
     // soient posees.
     const { AppModule } = await import('../src/app.module.js');
-    const { ProblemDetailsFilter } =
-      await import('../src/common/filters/problem-details.filter.js');
+    const { configureApp } = await import('../src/configure-app.js');
 
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
       controllers: [PingController],
     }).compile();
 
+    // Meme configuration que `main.ts`, y compris `bodyParser: false` que
+    // `AuthModule` compense pour les routes non-auth.
     app = moduleRef.createNestApplication<NestExpressApplication>({
       logger: false,
+      bodyParser: false,
     });
-    app.setGlobalPrefix('api', {
-      exclude: ['health/liveness', 'health/readiness'],
-    });
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
-    app.useGlobalFilters(new ProblemDetailsFilter());
+    configureApp(app);
 
     await app.init();
   });

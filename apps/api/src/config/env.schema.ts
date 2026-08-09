@@ -1,5 +1,17 @@
 import { z } from 'zod';
 
+/** Variable d'environnement portant une liste separee par des virgules. */
+const commaSeparatedList = () =>
+  z
+    .string()
+    .default('')
+    .transform((value) =>
+      value
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0),
+    );
+
 /**
  * Schema des variables d'environnement.
  *
@@ -21,21 +33,31 @@ export const envSchema = z.object({
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
 
   /** Origines CORS autorisees, separees par des virgules. */
-  CORS_ORIGINS: z
-    .string()
-    .default('')
-    .transform((value) =>
-      value
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter((origin) => origin.length > 0),
-    ),
+  CORS_ORIGINS: commaSeparatedList(),
 
   /** Fenetre de rate limiting, en millisecondes. */
   THROTTLE_TTL: z.coerce.number().int().positive().default(60_000),
 
   /** Nombre de requetes autorisees par fenetre et par IP. */
   THROTTLE_LIMIT: z.coerce.number().int().positive().default(100),
+
+  /**
+   * Secret de signature des sessions Better Auth. Volontairement sans defaut :
+   * une valeur de repli serait embarquee telle quelle en production.
+   */
+  BETTER_AUTH_SECRET: z
+    .string()
+    .min(32, 'doit faire au moins 32 caracteres (openssl rand -base64 32)'),
+
+  /** URL publique de l'API, utilisee pour construire les URL d'auth. */
+  BETTER_AUTH_URL: z.url().default('http://localhost:3000'),
+
+  /**
+   * Origines de confiance pour la protection CSRF de Better Auth, separees par
+   * des virgules. Distinct de `CORS_ORIGINS` : le CSRF accepte aussi des
+   * schemes applicatifs (`trekker://`) qu'un navigateur n'enverrait jamais.
+   */
+  BETTER_AUTH_TRUSTED_ORIGINS: commaSeparatedList(),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -51,4 +51,12 @@ export class AppConfigService {
       limit: this.get('THROTTLE_LIMIT'),
     };
   }
+
+  get auth(): { secret: string; baseUrl: string; trustedOrigins: string[] } {
+    return {
+      secret: this.get('BETTER_AUTH_SECRET'),
+      baseUrl: this.get('BETTER_AUTH_URL'),
+      trustedOrigins: this.get('BETTER_AUTH_TRUSTED_ORIGINS'),
+    };
+  }
 }

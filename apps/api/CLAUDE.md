@@ -63,6 +63,73 @@ Zod résout ici.
 - `/health/*` est hors préfixe et `VERSION_NEUTRAL` : ne pas y toucher, les
   sondes de l'orchestrateur en dépendent.
 
+## Authentification
+
+Better Auth, via `@thallesp/nestjs-better-auth`. Instance construite par
+`createAuth()` (`src/auth/auth.config.ts`), câblée par `src/auth/auth.module.ts`.
+Le schéma des tables vit dans `packages/db/src/schema/auth.ts`.
+
+**Toute route est protégée par défaut.** Un `AuthGuard` global exige une
+session ; pour ouvrir une route, la décorer explicitement :
+
+```ts
+import {
+  AllowAnonymous,
+  OptionalAuth,
+  Session,
+  type UserSession,
+} from '@thallesp/nestjs-better-auth';
+
+@Controller('treks')
+export class TreksController {
+  @Get() // protege : 401 sans session
+  list(@Session() session: UserSession) {}
+
+  @Get('publics')
+  @AllowAnonymous() // ouvert
+  publics() {}
+
+  @Get('mixte')
+  @OptionalAuth() // session injectee si presente, sinon undefined
+  mixte(@Session() session?: UserSession) {}
+}
+```
+
+### `/api/auth/*` est une frontière
+
+Le handler Better Auth est monté en **middleware Express**, pas en contrôleur
+Nest. Conséquences à connaître avant de debugger :
+
+- il échappe à `setGlobalPrefix` et au versionnement : `/api/auth/sign-in/email`
+  n'est **pas** `/api/v1/...`, et ne doit pas le devenir (les clients
+  `better-auth` construisent ces URL eux-mêmes) ;
+- il échappe à `ProblemDetailsFilter` : ces routes répondent au **format
+  Better Auth** (`{ message, code }`), pas en RFC 9457. C'est assumé : réécrire
+  ces réponses casserait `better-auth/client`. Le format RFC 9457 reste la
+  règle pour **toutes** les routes métier ;
+- il échappe à `ThrottlerGuard` : le rate limiting de ces routes est celui de
+  Better Auth (`rateLimit`, stocké en base, table `rate_limits`).
+
+### Sessions web et mobile
+
+Le web utilise des cookies. Le mobile n'a pas de jar de cookies : le plugin
+`bearer` renvoie le jeton dans l'en-tête `set-auth-token` à la connexion, que
+le client rejoue en `Authorization: Bearer <token>`.
+
+`BETTER_AUTH_TRUSTED_ORIGINS` (protection CSRF) est **distinct** de
+`CORS_ORIGINS` : il accepte aussi des schemes applicatifs (`trekker://`) qu'un
+navigateur n'enverrait jamais. Le CORS reste décidé uniquement dans
+`configure-app.ts` (`disableTrustedOriginsCors: true` côté librairie).
+
+### Pièges
+
+- `bodyParser: false` est passé à `NestFactory.create` **et** à
+  `createNestApplication` dans les tests : Better Auth lit le corps brut. La
+  librairie remet les parsers pour les routes non-auth. L'oublier dans un test
+  donne des corps de requête vides sur des routes sans rapport avec l'auth.
+- `advanced.database.generateId: newId` est indispensable : les `id` sont des
+  colonnes `uuid`, et Better Auth génère sinon des chaînes aléatoires.
+
 ## Erreurs
 
 Lever les exceptions Nest habituelles (`NotFoundException`,
@@ -92,6 +159,17 @@ Nouvelle variable d'environnement :
 
 L'application refuse de démarrer si une variable manque : c'est voulu, ne pas
 adoucir en défaut silencieux ce qui doit être fourni explicitement.
+
+## Bootstrap
+
+`configureApp(app)` (`src/configure-app.ts`) porte tout ce qui est commun à
+l'application qui tourne et à celle des tests : helmet, compression, CORS,
+préfixe global, versionnement. `main.ts` ne garde que ce qui lui est propre
+(logger, shutdown hooks, Swagger, `listen`).
+
+Ne pas re-déclarer ces réglages à la main dans un test : une divergence entre
+les deux fait passer des tests sur une application qui n'est pas celle qui sert
+le trafic.
 
 ## Tests
 

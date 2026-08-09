@@ -3,16 +3,20 @@ import { timestamp, uuid } from 'drizzle-orm/pg-core';
 import { uuidv7 } from 'uuidv7';
 
 /**
- * Conventions de colonnes partagees par toutes les tables du projet.
+ * Generateur d'identifiant du projet.
  *
- * Les identifiants sont des UUID v7 generes cote application : ils restent
- * triables chronologiquement (bon pour l'index B-tree) tout en etant non
- * devinables, ce qui compte des lors qu'ils transitent vers un client mobile.
+ * UUID v7 genere cote application : triable chronologiquement (bon pour
+ * l'index B-tree) tout en restant non devinable, ce qui compte des lors qu'il
+ * transite vers un client mobile.
+ *
+ * Expose separement de `primaryKeyColumn()` car certaines librairies
+ * (Better Auth) generent l'`id` elles-memes, en amont de Drizzle : elles
+ * doivent produire exactement le meme format.
  */
-export const primaryKeyColumn = () =>
-  uuid('id')
-    .primaryKey()
-    .$defaultFn(() => uuidv7());
+export const newId = (): string => uuidv7();
+
+/** Cle primaire commune a toutes les tables du projet. */
+export const primaryKeyColumn = () => uuid('id').primaryKey().$defaultFn(newId);
 
 /**
  * `created_at` / `updated_at` en `timestamptz`. `updated_at` est remis a jour

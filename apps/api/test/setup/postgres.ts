@@ -4,6 +4,12 @@ import {
   type StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql';
 
+/**
+ * Secret Better Auth des tests. Sans valeur d'au moins 32 caracteres,
+ * `envSchema` refuse de valider et l'application ne demarre pas.
+ */
+export const AUTH_SECRET = 'secret-de-test-uniquement-32-caracteres-minimum';
+
 export interface TestDatabase {
   connectionString: string;
   stop: () => Promise<void>;

@@ -76,12 +76,48 @@ Tout ce qui traverse la frontière HTTP est décrit par un schéma Zod dans
 - Aucun `process.env` ailleurs que dans ce schéma : passer par
   `AppConfigService`.
 
+## Authentification
+
+Better Auth, monté sur `apps/api`. Le schéma (`users`, `sessions`, `accounts`,
+`verifications`, `rate_limits`) vit dans `packages/db/src/schema/auth.ts` et
+suit les conventions de colonnes du projet ; l'instance et le module Nest
+vivent dans `apps/api/src/auth/`. Détails d'usage dans `apps/api/CLAUDE.md`.
+
+Deux points structurants :
+
+- **Les routes sont fermées par défaut.** Un guard global exige une session ;
+  ouvrir une route est un acte explicite (`@AllowAnonymous()`).
+- **`/api/auth/*` est une frontière de protocole**, pas une route métier : ces
+  routes échappent au préfixe, au versionnement, au format d'erreur RFC 9457 et
+  au rate limiting Nest. C'est le seul endroit de l'API où ces règles ne
+  s'appliquent pas, et ça ne doit pas s'étendre.
+
+Ne pas ajouter `better-auth` à `@repo/contracts` ni à `@repo/db` : le premier
+ne dépend que de `zod`, le second n'a ni logique métier ni dépendance serveur.
+
+### Exception explicite à la règle des contrats
+
+Les charges utiles de `/api/auth/*` (inscription, connexion, session) ne sont
+**pas** décrites dans `@repo/contracts`, par dérogation assumée à la règle
+« tout ce qui traverse la frontière HTTP vit dans contracts ».
+
+Raison : ces schémas ne sont pas dupliqués entre l'API et ses clients — les
+clients officiels (`better-auth/client`, y compris côté mobile) infèrent leurs
+types depuis l'instance serveur. Écrire des schémas Zod à la main dans
+`contracts` créerait précisément la duplication que la règle cherche à
+empêcher, avec deux définitions à maintenir en phase.
+
+La dérogation s'arrête là : dès qu'une **route métier** expose un utilisateur
+(auteur d'un trek, membre…), sa forme publique est un contrat d'API ordinaire
+et vit dans `contracts` (`publicUserSchema`, sans `email` ni `emailVerified`).
+
 ## Hors périmètre actuel
 
-- **Pas d'authentification** : c'est un chantier dédié, ne pas l'improviser au
-  détour d'une feature.
+- **Pas de vérification d'email ni de reset de mot de passe** : les deux
+  supposent un transport mail, qui n'est pas choisi. Chantier distinct.
+- **Pas de providers sociaux** (Google, Apple).
 - **Pas de CI** pour l'instant.
-- **Aucune entité métier** : le schéma est volontairement vide.
+- **Aucune entité métier** : hors tables d'authentification, le schéma est vide.
 
 ## Conventions de code
 

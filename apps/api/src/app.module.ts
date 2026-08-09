@@ -3,6 +3,7 @@ import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ZodValidationPipe } from 'nestjs-zod';
 
+import { AuthModule } from './auth/auth.module';
 import { ProblemDetailsFilter } from './common/filters/problem-details.filter';
 import { AppConfigModule } from './config/app-config.module';
 import { AppConfigService } from './config/app-config.service';
@@ -22,6 +23,9 @@ import { LoggerModule } from './logger/logger.module';
         throttlers: [config.throttle],
       }),
     }),
+    // Enregistre un `AuthGuard` global : toute route ci-dessous exige une
+    // session sauf `@AllowAnonymous()`. A garder avant les modules metier.
+    AuthModule,
     HealthModule,
     // Les modules metier viendront ici, un dossier par feature sous `modules/`.
   ],
