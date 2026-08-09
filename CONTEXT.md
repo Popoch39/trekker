@@ -1,39 +1,68 @@
-# Contexte du domaine — trekker
+# Trekker
 
-Glossaire du langage du projet. Un terme ici a **un seul** sens, dans le code
-comme dans les discussions. Aucun détail d'implémentation : ce fichier décrit ce
-dont on parle, pas comment c'est construit.
+Application de randonnee : un catalogue d'itineraires consultable depuis un
+front web et une app mobile, alimente par des donnees ouvertes et, a terme, par
+ses utilisateurs.
 
-## Utilisateur
+## Language
 
-Une personne identifiée par une adresse email unique. C'est l'entité à laquelle
-se rattache tout ce qui est produit dans l'application.
+### Itineraires
 
-Un Utilisateur n'est pas une méthode de connexion : la même personne peut se
-connecter de plusieurs façons sans jamais devenir deux Utilisateurs.
+**Trek**:
+Un parcours de randonnee decrit et reutilisable, sans date ni participants.
+_Avoid_: Randonnee, rando, sentier, parcours, circuit
 
-## Compte
+**Sortie**:
+Une randonnee organisee a une date donnee, par un utilisateur, sur un trek.
+Concept distinct du trek et pas encore implemente.
+_Avoid_: Evenement, event, trek date
 
-Le lien entre un Utilisateur et **une** méthode d'authentification — mot de
-passe, ou plus tard un fournisseur externe (Google, Apple).
+**Trace**:
+La geometrie du trek : la suite de positions qui dessine le parcours sur une
+carte. Un trek a exactement une trace.
+_Avoid_: Geometrie, GPX, ligne, chemin
 
-Piège de vocabulaire à ne pas laisser passer : « compte » au sens courant
-désigne l'Utilisateur (« mon compte », « supprimer mon compte »). Dans ce
-projet, un Compte est strictement un moyen de se connecter. Un Utilisateur a
-un ou plusieurs Comptes ; supprimer un Compte ne supprime pas l'Utilisateur.
+**Point de depart**:
+La position ou commence un trek. Derive de la trace, conserve a part parce que
+c'est sur lui que porte la recherche par proximite.
+_Avoid_: Depart, origine, start
 
-## Session
+**Type de parcours**:
+La forme du trek : boucle, aller-retour, ou d'un point a un autre.
+_Avoid_: Route, forme, format
 
-Une période pendant laquelle un client donné agit au nom d'un Utilisateur.
-Elle expire, et un même Utilisateur peut en avoir plusieurs simultanément — le
-web et le mobile en ouvrent chacun une.
+### Provenance
 
-La Session appartient au client, pas à l'Utilisateur : se déconnecter du mobile
-ne déconnecte pas le web.
+**Source**:
+D'ou vient un trek : importe d'un publicateur de donnees ouvertes, ou cree par
+un utilisateur. Determine s'il est modifiable.
+_Avoid_: Origine, provider, fournisseur
 
-## Vérification
+**Instance source**:
+Le publicateur precis dont un trek importe provient. Deux publicateurs
+numerotent leurs itineraires independamment : c'est l'instance qui leve
+l'ambiguite.
+_Avoid_: Portail, serveur, partenaire
 
-Une preuve à durée limitée, adressée à un canal (une adresse email), qu'on
-échange contre une action. Sert aujourd'hui au socle technique ; les usages
-visibles (confirmation d'adresse, réinitialisation de mot de passe) ne sont pas
-encore ouverts.
+**Liste blanche**:
+L'ensemble des instances sources dont la licence a ete verifiee et qui peuvent
+donc etre importees. Y entrer est un acte explicite.
+_Avoid_: Whitelist, sources autorisees
+
+**Licence**:
+Les conditions de reutilisation attachees a un trek importe, et l'obligation
+d'attribution qui en decoule. Portee par le trek, pas seulement par la base.
+_Avoid_: Droits, copyright
+
+### Difficulte
+
+**Difficulte**:
+Le niveau d'exigence d'un trek sur l'echelle du projet : facile, moyen,
+difficile, tres difficile. Absente quand aucune correspondance fiable n'existe.
+_Avoid_: Niveau, cotation
+
+**Difficulte source**:
+Le libelle de difficulte tel que publie par l'instance source, conserve tel
+quel. Sert a verifier et corriger la correspondance vers la difficulte du
+projet.
+_Avoid_: Difficulte brute, libelle original

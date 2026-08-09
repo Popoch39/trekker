@@ -191,6 +191,45 @@ Deux pièges vérifiés en pratique, à respecter dans tout nouveau test :
 Un guard global (rate limiting) ne s'exécute que sur une route effectivement
 résolue : le tester via un 404 ne prouve rien.
 
+Le rate limiting est global et par IP : un fichier de test qui appelle l'API
+plus d'une dizaine de fois doit poser `THROTTLE_LIMIT` assez haut, sinon il
+reçoit un 429 au milieu, loin de la ligne fautive.
+
+### Couverture
+
+**Les modules métier (`src/modules/**`) et les scripts (`src/scripts/**`) sont
+tenus à 100 %** — lignes, branches, fonctions et instructions — et le seuil est
+**bloquant** : `pnpm test` échoue en dessous. Les seuils sont définis par glob
+dans `vitest.config.mts`, le reste du dépôt n'est pas contraint.
+
+Deux conséquences sur la façon d'écrire le code :
+
+- Une branche défensive qui ne peut pas survenir n'est pas à tester, elle est à
+  supprimer. C'est pourquoi le comptage de la pagination passe par `db.$count`
+  plutôt que par un `select count(*)` dont il faudrait indexer le résultat.
+- Un script exécutable se scinde en deux : la logique, exportée et testée
+  (`import-treks.ts`, `seed-treks.ts`), et une amorce `*.bin.ts` réduite à
+  l'orchestration, seule exclue de la couverture.
+
+Les fichiers `*.module.ts` et `*.dto.ts` sont également exclus : les couvrir ne
+prouverait rien de leur comportement.
+
+## Scripts
+
+`src/scripts/` contient les commandes lancées à la main, hors du conteneur Nest.
+Elles vivent ici plutôt que dans `packages/db` parce qu'elles s'appuient sur le
+mapper Geotrek — et que `@repo/db` ne peut pas dépendre de `apps/api`.
+
+```sh
+pnpm --filter api import:treks   # reseau -> apps/api/data/treks.json (non versionne)
+pnpm --filter api seed           # src/data/treks.fixture.json -> base
+pnpm --filter api seed <fichier> # chemin relatif a apps/api
+```
+
+La fixture livrée est copiée dans `dist/` via `compilerOptions.assets` de
+`nest-cli.json` : sans cette entrée, le seed marche en dev et échoue dans
+l'image Docker.
+
 ## Production
 
 `Dockerfile` multi-stage, Node 22 alpine, non-root, `dumb-init` en PID 1 pour

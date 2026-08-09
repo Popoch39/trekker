@@ -390,10 +390,129 @@ collection:
       sortKey: -800
       description: >-
         Routes metier : prefixe /api, versionnement URI /v1, fermees par defaut
-        (401 sans session), erreurs en RFC 9457. Aucune route metier n'existe
-        encore dans le projet — ce dossier est le point d'entree pour les
-        ajouter.
-    children: []
+        (401 sans session), erreurs en RFC 9457. Un echec de validation repond
+        422 avec le detail des champs dans `errors[]`.
+    children:
+      - name: Treks
+        meta:
+          id: fld_3b21f5c4d8a94e6fb0172c95ee3a481d
+          created: 1786233600000
+          modified: 1786233600000
+          sortKey: -1000
+          description: >-
+            Catalogue d'itineraires. Peuple par `pnpm seed` ; sans seed
+            prealable la liste est vide et ce n'est pas une erreur. Les
+            itineraires importes portent leur licence et le lien vers leur
+            source : ces deux champs sont a afficher, l'attribution est une
+            obligation.
+        children:
+          - name: GET treks (liste)
+            url: "{{ _.base_url }}/api/v1/treks"
+            method: GET
+            meta:
+              id: req_7c9a1e34b5d2408fa61e83cd45f2b917
+              created: 1786233600000
+              modified: 1786233600000
+              sortKey: -1000
+              description: >-
+                Liste paginee, triee par nom. Ne renvoie pas la trace : vingt
+                itineraires representeraient plusieurs megaoctets. Les filtres
+                sont desactives par defaut, les activer un par un.
+            parameters:
+              - name: page
+                value: "1"
+                disabled: true
+              - name: pageSize
+                value: "20"
+                disabled: true
+              - name: difficulty
+                value: moyen
+                disabled: true
+              - name: minDistanceMeters
+                value: "5000"
+                disabled: true
+              - name: maxDistanceMeters
+                value: "20000"
+                disabled: true
+            headers:
+              - name: Authorization
+                value: Bearer {{ _.token }}
+            scripts:
+              afterResponse: |-
+                // Amorce `trek_id` avec le premier itineraire rendu, pour que
+                // la requete de detail soit jouable sans copier-coller.
+                const body = insomnia.response.json();
+                const first = body && body.data && body.data[0];
+
+                if (first) {
+                  insomnia.environment.set('trek_id', first.id);
+                  console.log('trek_id =', first.id, '(' + first.name + ')');
+                } else {
+                  console.log('liste vide : lancer `pnpm seed` avant');
+                }
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              rebuildPath: true
+              cookies:
+                send: true
+                store: true
+          - name: GET treks (proximite)
+            url: "{{ _.base_url }}/api/v1/treks"
+            method: GET
+            meta:
+              id: req_2f68d0b91ac7439e85b3c1de07a4f256
+              created: 1786233600000
+              modified: 1786233600000
+              sortKey: -900
+              description: >-
+                Recherche par proximite, triee par distance croissante. Les
+                coordonnees pointent sur les Ecrins. `lat`, `lon` et `radiusKm`
+                vont ensemble : en fournir un seul repond 422, plutot que de
+                rendre une liste non filtree que le client croirait filtree.
+            parameters:
+              - name: lat
+                value: "44.93"
+              - name: lon
+                value: "6.29"
+              - name: radiusKm
+                value: "30"
+            headers:
+              - name: Authorization
+                value: Bearer {{ _.token }}
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              rebuildPath: true
+              cookies:
+                send: true
+                store: true
+          - name: GET trek (detail)
+            url: "{{ _.base_url }}/api/v1/treks/{{ _.trek_id }}"
+            method: GET
+            meta:
+              id: req_9d4e75a2c0b8461f93ac6e218b5df073
+              created: 1786233600000
+              modified: 1786233600000
+              sortKey: -800
+              description: >-
+                Fiche complete, avec la description et la trace en GeoJSON
+                LineString. Renseigner `trek_id` depuis un `id` de la liste :
+                l'executer sans le faire repond 400, l'identifiant devant etre
+                un UUID.
+            headers:
+              - name: Authorization
+                value: Bearer {{ _.token }}
+            settings:
+              renderRequestBody: true
+              encodeUrl: true
+              followRedirects: global
+              rebuildPath: true
+              cookies:
+                send: true
+                store: true
 cookieJar:
   name: Default Jar
   meta:
@@ -411,11 +530,13 @@ environments:
     base_url: http://localhost:3000
     email: user@example.com
     password: password1234
+    trek_id: ""
   dataPropertyOrder:
     "&":
       - base_url
       - email
       - password
+      - trek_id
   subEnvironments:
     # Environnement prive : `isPrivate` exclut ce document de l'ecriture Git
     # Sync. C'est ce qui evite qu'un jeton de session valide finisse commite a

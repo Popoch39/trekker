@@ -117,7 +117,41 @@ et vit dans `contracts` (`publicUserSchema`, sans `email` ni `emailVerified`).
   supposent un transport mail, qui n'est pas choisi. Chantier distinct.
 - **Pas de providers sociaux** (Google, Apple).
 - **Pas de CI** pour l'instant.
-- **Aucune entité métier** : hors tables d'authentification, le schéma est vide.
+- **Pas de création de treks par les utilisateurs** : autorisations, modération
+  et validation de trace restent à trancher. La colonne `created_by` et la
+  valeur `user` de l'enum `trek_source` sont posées pour ça, rien de plus.
+- **Pas de sorties datées** (une randonnée organisée à une date, avec des
+  participants) : concept distinct du trek, table distincte, plus tard.
+- **Pas de photos** : aucune source ouverte n'en fournit avec une licence
+  exploitable sans un suivi par média.
+- **Pas de dédoublonnage entre instances sources** : deux publicateurs
+  limitrophes peuvent décrire la même boucle, elle apparaîtra deux fois.
+
+## Domaine
+
+Le vocabulaire du projet vit dans `CONTEXT.md` à la racine — glossaire seul,
+sans détail d'implémentation. Un terme qui se discute s'y tranche avant d'être
+codé.
+
+Les décisions structurantes et difficiles à défaire sont dans `docs/adr/`.
+Deux à ce jour : le choix de PostGIS pour les traces, et celui des sources de
+données ouvertes avec leurs obligations d'attribution.
+
+## Treks
+
+Première entité métier : le catalogue d'itinéraires (`treks`), peuplé depuis des
+instances **Geotrek** en données ouvertes. Deux points à ne pas défaire :
+
+- **La liste blanche des sources est explicite** et porte la licence de chaque
+  publicateur (`apps/api/src/modules/treks/geotrek/geotrek.instances.ts`).
+  Ajouter une instance sans avoir constaté sa licence n'est pas un raccourci,
+  c'est une faute. `license` et `source_url` sont exposés au client parce que
+  l'attribution est une obligation, pas un ornement.
+- **Le seed est déterministe et hors ligne.** `pnpm import:treks` va au réseau
+  et écrit un fichier ; `pnpm seed` lit un fichier et écrit en base. L'upsert
+  porte sur `(source, source_instance, source_id)` : les `id` d'un trek importé
+  sont stables à vie, condition pour que d'autres tables puissent les
+  référencer.
 
 ## Conventions de code
 
