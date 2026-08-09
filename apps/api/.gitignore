@@ -54,3 +54,8 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Jeu de donnees complet produit par `pnpm import:treks` : 2400+ traces, ~200 Mo.
+# Non versionne a dessein — la fixture livree dans `src/data/` suffit au
+# developpement et aux tests, et le jeu complet se regenere depuis les sources.
+/data
