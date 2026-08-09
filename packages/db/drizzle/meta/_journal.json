@@ -8,6 +8,13 @@
       "when": 1786288768562,
       "tag": "0000_opposite_microchip",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786294640644,
+      "tag": "0001_tired_mentor",
+      "breakpoints": true
     }
   ]
 }
