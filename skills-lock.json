@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "design-postgis-tables": {
+      "source": "timescale/pg-aiguide",
+      "sourceType": "github",
+      "skillPath": "skills/design-postgis-tables/SKILL.md",
+      "computedHash": "54b10ad9c978b475e12073fa7a9c0bbced2edabed5d599b2c214878ec2f08493"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "b146008599c31057cef1c145774cea5d5afb30e8f43fa802e47a4b461419aaaf"
+    }
+  }
+}
