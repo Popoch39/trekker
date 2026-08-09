@@ -1,0 +1,38 @@
+import { Module } from '@nestjs/common';
+import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ZodValidationPipe } from 'nestjs-zod';
+
+import { ProblemDetailsFilter } from './common/filters/problem-details.filter';
+import { AppConfigModule } from './config/app-config.module';
+import { AppConfigService } from './config/app-config.service';
+import { DatabaseModule } from './database/database.module';
+import { HealthModule } from './health/health.module';
+import { LoggerModule } from './logger/logger.module';
+
+@Module({
+  imports: [
+    AppConfigModule,
+    LoggerModule,
+    DatabaseModule,
+    ThrottlerModule.forRootAsync({
+      imports: [AppConfigModule],
+      inject: [AppConfigService],
+      useFactory: (config: AppConfigService) => ({
+        throttlers: [config.throttle],
+      }),
+    }),
+    HealthModule,
+    // Les modules metier viendront ici, un dossier par feature sous `modules/`.
+  ],
+  providers: [
+    // Validation Zod globale : chaque DTO cree via `createZodDto` est valide
+    // automatiquement, sans pipe a declarer dans les controleurs.
+    { provide: APP_PIPE, useClass: ZodValidationPipe },
+    // Rate limiting global, par IP.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // Toutes les erreurs sortent en RFC 9457.
+    { provide: APP_FILTER, useClass: ProblemDetailsFilter },
+  ],
+})
+export class AppModule {}

@@ -1,0 +1,12 @@
+{
+  "$schema": "../../node_modules/oxlint/configuration_schema.json",
+  "extends": ["../../.oxlintrc.json"],
+  "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "jest"],
+  "env": {
+    "node": true,
+    "jest": true
+  },
+  "rules": {
+    "typescript/no-extraneous-class": "off"
+  }
+}
