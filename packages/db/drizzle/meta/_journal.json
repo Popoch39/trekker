@@ -22,6 +22,13 @@
       "when": 1786298828512,
       "tag": "0002_daffy_romulus",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786300678338,
+      "tag": "0003_flawless_moondragon",
+      "breakpoints": true
     }
   ]
 }
