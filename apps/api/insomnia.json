@@ -1,0 +1,473 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-08-09T12:00:00.000Z",
+  "__export_source": "trekker:apps/api",
+  "resources": [
+    {
+      "_id": "wrk_trekker",
+      "_type": "workspace",
+      "parentId": null,
+      "name": "trekker API",
+      "description": "API trekker (NestJS). Routes metier sous /api/v1, sondes hors prefixe, /api/auth/* servi par Better Auth.",
+      "scope": "collection",
+      "created": 1786233600000,
+      "modified": 1786233600000
+    },
+    {
+      "_id": "jar_trekker",
+      "_type": "cookie_jar",
+      "parentId": "wrk_trekker",
+      "name": "Default Jar",
+      "cookies": [],
+      "created": 1786233600000,
+      "modified": 1786233600000
+    },
+    {
+      "_id": "env_base",
+      "_type": "environment",
+      "parentId": "wrk_trekker",
+      "name": "Base Environment",
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1786233600000,
+      "created": 1786233600000,
+      "modified": 1786233600000,
+      "data": {
+        "base_url": "http://localhost:3000",
+        "email": "user@example.com",
+        "password": "password1234",
+        "token": "{% response 'header', 'req_auth_sign_in_email', 'set-auth-token', 'never', 60 %}"
+      },
+      "dataPropertyOrder": {
+        "&": ["base_url", "email", "password", "token"]
+      }
+    },
+    {
+      "_id": "fld_health",
+      "_type": "request_group",
+      "parentId": "wrk_trekker",
+      "name": "Health",
+      "description": "Sondes de l'orchestrateur : hors prefixe /api et hors versionnement, leur URL ne change jamais. Anonymes et exemptees du rate limiting.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1000,
+      "created": 1786233600000,
+      "modified": 1786233600000
+    },
+    {
+      "_id": "req_health_liveness",
+      "_type": "request",
+      "parentId": "fld_health",
+      "name": "GET liveness",
+      "description": "Le process est vivant. Ne touche a aucune dependance externe.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/health/liveness",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "created": 1786233600000,
+      "modified": 1786233600000
+    },
+    {
+      "_id": "req_health_readiness",
+      "_type": "request",
+      "parentId": "fld_health",
+      "name": "GET readiness",
+      "description": "Le service peut traiter du trafic : la base repond. Renvoie 503 si Postgres est injoignable.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/health/readiness",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -900,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "created": 1786233600000,
+      "modified": 1786233600000
+    },
+    {
+      "_id": "req_docs_json",
+      "_type": "request",
+      "parentId": "fld_health",
+      "name": "GET openapi (docs-json)",
+      "description": "Document OpenAPI genere par Swagger. Monte uniquement hors production.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/docs-json",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -800,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "created": 1786233600000,
+      "modified": 1786233600000
+    },
+    {
+      "_id": "fld_auth",
+      "_type": "request_group",
+      "parentId": "wrk_trekker",
+      "name": "Auth (Better Auth)",
+      "description": "Frontiere de protocole : ces routes echappent au prefixe /api/v1, au format d'erreur RFC 9457 et au rate limiting Nest. Elles repondent au format Better Auth ({ message, code }). Le web utilise les cookies ; le mobile rejoue le jeton renvoye dans l'en-tete set-auth-token en Authorization: Bearer.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -900,
+      "created": 1786233600000,
+      "modified": 1786233600000
+    },
+    {
+      "_id": "req_auth_sign_up_email",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "POST sign-up/email",
+      "description": "Inscription. requireEmailVerification est desactive : la session est ouverte immediatement.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/sign-up/email",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Utilisateur de test\",\n  \"email\": \"{{ _.email }}\",\n  \"password\": \"{{ _.password }}\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "created": 1786233600000,
+      "modified": 1786233600000
+    },
+    {
+      "_id": "req_auth_sign_in_email",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "POST sign-in/email",
+      "description": "Connexion. La variable d'environnement `token` lit l'en-tete set-auth-token de CETTE reponse : jouer cette requete suffit a authentifier les suivantes.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/sign-in/email",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.email }}\",\n  \"password\": \"{{ _.password }}\",\n  \"rememberMe\": true\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -900,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "created": 1786233600000,
+      "modified": 1786233600000
+    },
+    {
+      "_id": "req_auth_get_session",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "GET get-session",
+      "description": "Session courante. Renvoie null si le jeton est absent ou expire.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/auth/get-session",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -800,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "created": 1786233600000,
+      "modified": 1786233600000
+    },
+    {
+      "_id": "req_auth_token",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "GET token",
+      "description": "Expose par le plugin `bearer` : renvoie le jeton de session a partir des cookies. Utile pour recuperer un jeton sans rejouer sign-in.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/auth/token",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -700,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "created": 1786233600000,
+      "modified": 1786233600000
+    },
+    {
+      "_id": "req_auth_list_sessions",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "GET list-sessions",
+      "description": "Sessions actives de l'utilisateur courant.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/auth/list-sessions",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -600,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "created": 1786233600000,
+      "modified": 1786233600000
+    },
+    {
+      "_id": "req_auth_update_user",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "POST update-user",
+      "description": "Met a jour le profil (nom, image). L'email se change via change-email, hors perimetre tant qu'il n'y a pas de transport mail.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/update-user",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Nouveau nom\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -500,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "created": 1786233600000,
+      "modified": 1786233600000
+    },
+    {
+      "_id": "req_auth_change_password",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "POST change-password",
+      "description": "Changement de mot de passe avec l'ancien. A ne pas confondre avec un reset par mail, qui est hors perimetre.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/change-password",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"currentPassword\": \"{{ _.password }}\",\n  \"newPassword\": \"nouveau-password-1234\",\n  \"revokeOtherSessions\": true\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -400,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "created": 1786233600000,
+      "modified": 1786233600000
+    },
+    {
+      "_id": "req_auth_revoke_session",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "POST revoke-session",
+      "description": "Revoque une session precise, identifiee par son token (voir list-sessions).",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/revoke-session",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"token\": \"\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -300,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "created": 1786233600000,
+      "modified": 1786233600000
+    },
+    {
+      "_id": "req_auth_revoke_sessions",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "POST revoke-sessions",
+      "description": "Revoque toutes les sessions de l'utilisateur.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/revoke-sessions",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -200,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "created": 1786233600000,
+      "modified": 1786233600000
+    },
+    {
+      "_id": "req_auth_sign_out",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "POST sign-out",
+      "description": "Deconnexion : invalide la session courante et vide le cookie.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/sign-out",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -100,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "created": 1786233600000,
+      "modified": 1786233600000
+    },
+    {
+      "_id": "fld_v1",
+      "_type": "request_group",
+      "parentId": "wrk_trekker",
+      "name": "API v1",
+      "description": "Routes metier : prefixe /api, versionnement URI /v1, fermees par defaut (401 sans session), erreurs en RFC 9457. Aucune route metier n'existe encore dans le projet — ce dossier est le point d'entree pour les ajouter.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -800,
+      "created": 1786233600000,
+      "modified": 1786233600000
+    }
+  ]
+}
