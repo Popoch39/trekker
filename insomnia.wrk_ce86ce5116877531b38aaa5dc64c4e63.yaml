@@ -109,6 +109,22 @@ collection:
         headers:
           - name: Content-Type
             value: application/json
+        scripts:
+          afterResponse: |-
+            // Better Auth renvoie le jeton de session dans l'en-tete
+            // `set-auth-token` (plugin bearer). On le pousse dans
+            // l'environnement pour que les requetes suivantes l'envoient en
+            // `Authorization: Bearer`, exactement comme le fait le mobile.
+            const header = insomnia.response.headers.find(
+              (h) => h.key.toLowerCase() === 'set-auth-token',
+            );
+
+            if (header && header.value) {
+              insomnia.environment.set('token', header.value);
+              console.log('token mis a jour depuis sign-up/email');
+            } else {
+              console.log('pas de set-auth-token dans la reponse : token inchange');
+            }
         settings:
           renderRequestBody: true
           encodeUrl: true
@@ -140,6 +156,20 @@ collection:
         headers:
           - name: Content-Type
             value: application/json
+        scripts:
+          afterResponse: |-
+            // Voir sign-up/email : meme mecanique, le jeton de session est
+            // recupere dans `set-auth-token` et ecrit dans l'environnement.
+            const header = insomnia.response.headers.find(
+              (h) => h.key.toLowerCase() === 'set-auth-token',
+            );
+
+            if (header && header.value) {
+              insomnia.environment.set('token', header.value);
+              console.log('token mis a jour depuis sign-in/email');
+            } else {
+              console.log('pas de set-auth-token dans la reponse : token inchange');
+            }
         settings:
           renderRequestBody: true
           encodeUrl: true
@@ -381,11 +411,27 @@ environments:
     base_url: http://localhost:3000
     email: user@example.com
     password: password1234
-    token: "{% response 'header', 'req_415bd4ac1d16c5618ac9545caa249d83',
-      'set-auth-token', 'never', 60 %}"
   dataPropertyOrder:
     "&":
       - base_url
       - email
       - password
-      - token
+  subEnvironments:
+    # Environnement prive : `isPrivate` exclut ce document de l'ecriture Git
+    # Sync. C'est ce qui evite qu'un jeton de session valide finisse commite a
+    # chaque connexion. A selectionner dans Insomnia pour que `{{ _.token }}`
+    # soit resolu.
+    - name: Local (prive)
+      meta:
+        id: env_637db02bfcd69f102690090ce2128015
+        created: 1786233600000
+        modified: 1786233600000
+        isPrivate: true
+        sortKey: 0
+      data:
+        # Rempli automatiquement par le script `afterResponse` de
+        # sign-up/email et sign-in/email. Laisser vide.
+        token: ""
+      dataPropertyOrder:
+        "&":
+          - token
