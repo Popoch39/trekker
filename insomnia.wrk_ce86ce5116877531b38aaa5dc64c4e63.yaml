@@ -1,0 +1,391 @@
+type: collection.insomnia.rest/5.0
+schema_version: "5.1"
+name: trekker API
+meta:
+  id: wrk_ce86ce5116877531b38aaa5dc64c4e63
+  created: 1786233600000
+  modified: 1786233600000
+  description: >-
+    API trekker (NestJS). Routes metier sous /api/v1, sondes hors prefixe,
+    /api/auth/* servi par Better Auth.
+collection:
+  - name: Health
+    meta:
+      id: fld_1107b7a779252f552da925415d47f6a0
+      created: 1786233600000
+      modified: 1786233600000
+      sortKey: -1000
+      description: >-
+        Sondes de l'orchestrateur : hors prefixe /api et hors versionnement,
+        leur URL ne change jamais. Anonymes et exemptees du rate limiting.
+    children:
+      - name: GET liveness
+        url: "{{ _.base_url }}/health/liveness"
+        method: GET
+        meta:
+          id: req_14cb1f62b86f32e51ab5914350c3e52c
+          created: 1786233600000
+          modified: 1786233600000
+          sortKey: -1000
+          description: Le process est vivant. Ne touche a aucune dependance externe.
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          rebuildPath: true
+          cookies:
+            send: true
+            store: true
+      - name: GET readiness
+        url: "{{ _.base_url }}/health/readiness"
+        method: GET
+        meta:
+          id: req_f36b5a7bdadd520a140036b3cbbb1ee0
+          created: 1786233600000
+          modified: 1786233600000
+          sortKey: -900
+          description: >-
+            Le service peut traiter du trafic : la base repond. Renvoie 503 si
+            Postgres est injoignable.
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          rebuildPath: true
+          cookies:
+            send: true
+            store: true
+      - name: GET openapi (docs-json)
+        url: "{{ _.base_url }}/api/docs-json"
+        method: GET
+        meta:
+          id: req_d3f447b8adbcac79735a0fde54e172e4
+          created: 1786233600000
+          modified: 1786233600000
+          sortKey: -800
+          description: >-
+            Document OpenAPI genere par Swagger. Monte uniquement hors
+            production.
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          rebuildPath: true
+          cookies:
+            send: true
+            store: true
+  - name: Auth (Better Auth)
+    meta:
+      id: fld_f2a0a97ae6f89f31181a6f172a90fe24
+      created: 1786233600000
+      modified: 1786233600000
+      sortKey: -900
+      description: >-
+        Frontiere de protocole : ces routes echappent au prefixe /api/v1, au
+        format d'erreur RFC 9457 et au rate limiting Nest. Elles repondent au
+        format Better Auth ({ message, code }). Le web utilise les cookies ; le
+        mobile rejoue le jeton renvoye dans l'en-tete set-auth-token en
+        Authorization: Bearer.
+    children:
+      - name: POST sign-up/email
+        url: "{{ _.base_url }}/api/auth/sign-up/email"
+        method: POST
+        meta:
+          id: req_176193603525e90833ba2d53407d7093
+          created: 1786233600000
+          modified: 1786233600000
+          sortKey: -1000
+          description: >-
+            Inscription. requireEmailVerification est desactive : la session est
+            ouverte immediatement.
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "Utilisateur de test",
+              "email": "{{ _.email }}",
+              "password": "{{ _.password }}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          rebuildPath: true
+          cookies:
+            send: true
+            store: true
+      - name: POST sign-in/email
+        url: "{{ _.base_url }}/api/auth/sign-in/email"
+        method: POST
+        meta:
+          id: req_415bd4ac1d16c5618ac9545caa249d83
+          created: 1786233600000
+          modified: 1786233600000
+          sortKey: -900
+          description: >-
+            Connexion. La variable d'environnement `token` lit l'en-tete
+            set-auth-token de CETTE reponse : jouer cette requete suffit a
+            authentifier les suivantes.
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "email": "{{ _.email }}",
+              "password": "{{ _.password }}",
+              "rememberMe": true
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          rebuildPath: true
+          cookies:
+            send: true
+            store: true
+      - name: GET get-session
+        url: "{{ _.base_url }}/api/auth/get-session"
+        method: GET
+        meta:
+          id: req_cc34310db6576d826e3abdf8dafe2ab8
+          created: 1786233600000
+          modified: 1786233600000
+          sortKey: -800
+          description: Session courante. Renvoie null si le jeton est absent ou expire.
+        headers:
+          - name: Authorization
+            value: Bearer {{ _.token }}
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          rebuildPath: true
+          cookies:
+            send: true
+            store: true
+      - name: GET token
+        url: "{{ _.base_url }}/api/auth/token"
+        method: GET
+        meta:
+          id: req_1ff10b0a37101a4d86449580052cac87
+          created: 1786233600000
+          modified: 1786233600000
+          sortKey: -700
+          description: >-
+            Expose par le plugin `bearer` : renvoie le jeton de session a partir
+            des cookies. Utile pour recuperer un jeton sans rejouer sign-in.
+        headers:
+          - name: Authorization
+            value: Bearer {{ _.token }}
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          rebuildPath: true
+          cookies:
+            send: true
+            store: true
+      - name: GET list-sessions
+        url: "{{ _.base_url }}/api/auth/list-sessions"
+        method: GET
+        meta:
+          id: req_2d066dab55e8ff2ea89fb4952452b754
+          created: 1786233600000
+          modified: 1786233600000
+          sortKey: -600
+          description: Sessions actives de l'utilisateur courant.
+        headers:
+          - name: Authorization
+            value: Bearer {{ _.token }}
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          rebuildPath: true
+          cookies:
+            send: true
+            store: true
+      - name: POST update-user
+        url: "{{ _.base_url }}/api/auth/update-user"
+        method: POST
+        meta:
+          id: req_f91d8b0005aaefbc14049931b59f0b89
+          created: 1786233600000
+          modified: 1786233600000
+          sortKey: -500
+          description: >-
+            Met a jour le profil (nom, image). L'email se change via
+            change-email, hors perimetre tant qu'il n'y a pas de transport mail.
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "Nouveau nom"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Authorization
+            value: Bearer {{ _.token }}
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          rebuildPath: true
+          cookies:
+            send: true
+            store: true
+      - name: POST change-password
+        url: "{{ _.base_url }}/api/auth/change-password"
+        method: POST
+        meta:
+          id: req_90401acb821c163d669cb31f9e4a4284
+          created: 1786233600000
+          modified: 1786233600000
+          sortKey: -400
+          description: >-
+            Changement de mot de passe avec l'ancien. A ne pas confondre avec un
+            reset par mail, qui est hors perimetre.
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "currentPassword": "{{ _.password }}",
+              "newPassword": "nouveau-password-1234",
+              "revokeOtherSessions": true
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Authorization
+            value: Bearer {{ _.token }}
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          rebuildPath: true
+          cookies:
+            send: true
+            store: true
+      - name: POST revoke-session
+        url: "{{ _.base_url }}/api/auth/revoke-session"
+        method: POST
+        meta:
+          id: req_ac7b11eaf5e1cb3957c489c08125ff6d
+          created: 1786233600000
+          modified: 1786233600000
+          sortKey: -300
+          description: >-
+            Revoque une session precise, identifiee par son token (voir
+            list-sessions).
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "token": ""
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Authorization
+            value: Bearer {{ _.token }}
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          rebuildPath: true
+          cookies:
+            send: true
+            store: true
+      - name: POST revoke-sessions
+        url: "{{ _.base_url }}/api/auth/revoke-sessions"
+        method: POST
+        meta:
+          id: req_b5d3d4649b1abb6ca766c16c18d16934
+          created: 1786233600000
+          modified: 1786233600000
+          sortKey: -200
+          description: Revoque toutes les sessions de l'utilisateur.
+        body:
+          mimeType: application/json
+          text: "{}"
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Authorization
+            value: Bearer {{ _.token }}
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          rebuildPath: true
+          cookies:
+            send: true
+            store: true
+      - name: POST sign-out
+        url: "{{ _.base_url }}/api/auth/sign-out"
+        method: POST
+        meta:
+          id: req_5e6cfbbac5aecec832da374d82fde9c0
+          created: 1786233600000
+          modified: 1786233600000
+          sortKey: -100
+          description: "Deconnexion : invalide la session courante et vide le cookie."
+        body:
+          mimeType: application/json
+          text: "{}"
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Authorization
+            value: Bearer {{ _.token }}
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          rebuildPath: true
+          cookies:
+            send: true
+            store: true
+  - name: API v1
+    meta:
+      id: fld_76406bd263d8a0f79a6740ac33ac2865
+      created: 1786233600000
+      modified: 1786233600000
+      sortKey: -800
+      description: >-
+        Routes metier : prefixe /api, versionnement URI /v1, fermees par defaut
+        (401 sans session), erreurs en RFC 9457. Aucune route metier n'existe
+        encore dans le projet — ce dossier est le point d'entree pour les
+        ajouter.
+    children: []
+cookieJar:
+  name: Default Jar
+  meta:
+    id: jar_ff28d1ec2b039b3ddc192b598cc238d9
+    created: 1786233600000
+    modified: 1786233600000
+  cookies: []
+environments:
+  name: Base Environment
+  meta:
+    id: env_44400d890c3b3085ec7ce711663d51fe
+    created: 1786233600000
+    modified: 1786233600000
+  data:
+    base_url: http://localhost:3000
+    email: user@example.com
+    password: password1234
+    token: "{% response 'header', 'req_415bd4ac1d16c5618ac9545caa249d83',
+      'set-auth-token', 'never', 60 %}"
+  dataPropertyOrder:
+    "&":
+      - base_url
+      - email
+      - password
+      - token
