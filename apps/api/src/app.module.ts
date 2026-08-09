@@ -10,6 +10,7 @@ import { AppConfigService } from './config/app-config.service';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { LoggerModule } from './logger/logger.module';
+import { TreksModule } from './modules/treks/treks.module';
 
 @Module({
   imports: [
@@ -27,7 +28,8 @@ import { LoggerModule } from './logger/logger.module';
     // session sauf `@AllowAnonymous()`. A garder avant les modules metier.
     AuthModule,
     HealthModule,
-    // Les modules metier viendront ici, un dossier par feature sous `modules/`.
+    // Modules metier, un dossier par feature sous `modules/`.
+    TreksModule,
   ],
   providers: [
     // Validation Zod globale : chaque DTO cree via `createZodDto` est valide
