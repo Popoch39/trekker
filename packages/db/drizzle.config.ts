@@ -20,6 +20,9 @@ export default defineConfig({
   out: './drizzle',
   dbCredentials: { url },
   casing: 'snake_case',
+  // Exclut les tables systeme de PostGIS (`spatial_ref_sys`, `geometry_columns`)
+  // des diffs : sans ca, `introspect` et `push` proposent de les supprimer.
+  extensionsFilters: ['postgis'],
   verbose: true,
   strict: true,
 });

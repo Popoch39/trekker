@@ -22,8 +22,10 @@ export interface TestDatabase {
  * qu'en production. Necessite un daemon Docker accessible.
  */
 export async function startTestDatabase(): Promise<TestDatabase> {
+  // Meme image que `compose.yaml` : sans PostGIS, la premiere migration echoue
+  // sur `CREATE EXTENSION postgis`.
   const container: StartedPostgreSqlContainer = await new PostgreSqlContainer(
-    'postgres:17-alpine',
+    'postgis/postgis:17-3.5-alpine',
   )
     .withDatabase('trekker_test')
     .withUsername('trekker')

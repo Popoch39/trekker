@@ -2,7 +2,12 @@ name: trekker
 
 services:
   postgres:
-    image: postgres:17-alpine
+    # Image PostGIS et non `postgres:17-alpine` : les traces de randonnee sont
+    # des `geometry(linestring,4326)`. Ses scripts d'initdb jouent deja
+    # `CREATE EXTENSION postgis`. Changer d'image impose de recreer le volume
+    # (`docker compose down -v`) : les deux images ne partagent pas leur
+    # repertoire de donnees.
+    image: postgis/postgis:17-3.5-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-trekker}
